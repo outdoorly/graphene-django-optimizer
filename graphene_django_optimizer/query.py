@@ -337,10 +337,7 @@ class QueryOptimizerStore():
         else:
             self.select_set.add(name)
         for prefetch in store.prefetch_set:
-            if isinstance(prefetch, Prefetch):
-                prefetch.add_prefix(name)
-            else:
-                prefetch = name + LOOKUP_SEP + prefetch
+            prefetch.add_prefix(name)
             self.prefetch_set.add(prefetch)
         if self.only_set is not None:
             if store.only_set is None:
@@ -355,13 +352,10 @@ class QueryOptimizerStore():
             self.prefetch_set.add(Prefetch(name, queryset=queryset))
         elif store.prefetch_set:
             for prefetch in store.prefetch_set:
-                if isinstance(prefetch, Prefetch):
-                    prefetch.add_prefix(name)
-                else:
-                    prefetch = name + LOOKUP_SEP + prefetch
+                prefetch.add_prefix(name)
                 self.prefetch_set.add(prefetch)
         else:
-            self.prefetch_set.add(name)
+            self.prefetch_set.add(Prefetch(name))
 
     def only(self, field):
         if self.only_set is not None:
@@ -376,7 +370,6 @@ class QueryOptimizerStore():
             queryset = queryset.select_related(*self.select_set)
 
         if self.prefetch_set:
-            print(self.prefetch_set)
             queryset = queryset.prefetch_related(*self.prefetch_set)
 
         if self.only_set:
