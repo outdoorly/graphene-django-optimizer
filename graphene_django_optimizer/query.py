@@ -47,7 +47,7 @@ class QueryOptimizer(object):
 
     def __init__(self, info, **options):
         self.root_info = info
-        self.disable_abort_only = options.pop("disable_abort_only", False)
+        self.disable_abort_only = options.pop('disable_abort_only', False)
 
     def optimize(self, queryset):
         info = self.root_info
@@ -61,7 +61,7 @@ class QueryOptimizer(object):
 
     def _get_type(self, field_def):
         a_type = field_def.type
-        while hasattr(a_type, "of_type"):
+        while hasattr(a_type, 'of_type'):
             a_type = a_type.of_type
         return a_type
 
@@ -69,7 +69,7 @@ class QueryOptimizer(object):
         if isinstance(graphql_type, (GraphQLInterfaceType, GraphQLUnionType)):
             return self.root_info.schema.get_possible_types(graphql_type)
         else:
-            return (graphql_type,)
+            return (graphql_type, )
 
     def _get_base_model(self, graphql_types):
         models = tuple(t.graphene_type._meta.model for t in graphql_types)
@@ -87,10 +87,10 @@ class QueryOptimizer(object):
             parent_model = self._get_base_model(possible_types)
             if not parent_model:
                 continue
-            path_from_parent = _get_path_from_parent(fragment_model._meta, parent_model)
+            path_from_parent = _get_path_from_parent(
+                fragment_model._meta, parent_model)
             select_related_name = LOOKUP_SEP.join(
-                p.join_field.name for p in path_from_parent
-            )
+                p.join_field.name for p in path_from_parent)
             if not select_related_name:
                 continue
             fragment_store = self._optimize_gql_selections(
@@ -124,7 +124,8 @@ class QueryOptimizer(object):
         possible_types = self._get_possible_types(graphql_type)
         for selection in selection_set.selections:
             if isinstance(selection, InlineFragment):
-                self.handle_inline_fragment(selection, schema, possible_types, store)
+                self.handle_inline_fragment(
+                    selection, schema, possible_types, store)
             else:
                 name = selection.name.value
                 if isinstance(selection, FragmentSpread):
@@ -137,9 +138,9 @@ class QueryOptimizer(object):
 
                         graphene_type = possible_type.graphene_type
                         # Check if graphene type is a relay connection or a relay edge
-                        if hasattr(graphene_type._meta, "node") or (
-                            hasattr(graphene_type, "cursor")
-                            and hasattr(graphene_type, "node")
+                        if hasattr(graphene_type._meta, 'node') or (
+                            hasattr(graphene_type, 'cursor')
+                            and hasattr(graphene_type, 'node')
                         ):
                             relay_store = self._optimize_gql_selections(
                                 self._get_type(selection_field_def),
@@ -151,7 +152,7 @@ class QueryOptimizer(object):
                             except ImportError:
                                 store.abort_only_optimization()
                         else:
-                            model = getattr(graphene_type._meta, "model", None)
+                            model = getattr(graphene_type._meta, 'model', None)
                             if model and name not in optimized_fields_by_model:
                                 field_model = optimized_fields_by_model[name] = model
                                 if field_model == model:
@@ -166,11 +167,9 @@ class QueryOptimizer(object):
 
     def _optimize_field(self, store, model, selection, field_def, parent_type):
         optimized_by_name = self._optimize_field_by_name(
-            store, model, selection, field_def
-        )
+            store, model, selection, field_def)
         optimized_by_hints = self._optimize_field_by_hints(
-            store, selection, field_def, parent_type
-        )
+            store, selection, field_def, parent_type)
         optimized = optimized_by_name or optimized_by_hints
         if not optimized:
             store.abort_only_optimization()
@@ -212,7 +211,7 @@ class QueryOptimizer(object):
         return False
 
     def _get_optimization_hints(self, resolver):
-        return getattr(resolver, "optimization_hints", None)
+        return getattr(resolver, 'optimization_hints', None)
 
     def _get_value(self, info, value):
         if isinstance(value, Variable):
@@ -245,10 +244,7 @@ class QueryOptimizer(object):
             store.select_set,
         )
         self._add_optimization_hints(
-            [
-                hint if isinstance(hint, Prefetch) else Prefetch(hint)
-                for hint in optimization_hints.prefetch_related(info, *args)
-            ],
+            optimization_hints.prefetch_related(info, *args),
             store.prefetch_set,
         )
         if store.only_set is not None:
@@ -261,9 +257,7 @@ class QueryOptimizer(object):
     def _add_optimization_hints(self, source, target):
         if source:
             if not is_iterable(source):
-                source = {
-                    source,
-                }
+                source = {source,}
             target.update(source)
 
     def _get_name_from_resolver(self, resolver):
@@ -273,7 +267,7 @@ class QueryOptimizer(object):
             if name_fn:
                 return name_fn()
         if self._is_resolver_for_id_field(resolver):
-            return "id"
+            return 'id'
         elif isinstance(resolver, functools.partial):
             resolver_fn = resolver
             if resolver_fn.func != default_resolver:
@@ -286,17 +280,14 @@ class QueryOptimizer(object):
                     # No suitable instances found, default to first arg
                     arg = resolver_fn.args[0]
                 resolver_fn = arg
-            if (
-                isinstance(resolver_fn, functools.partial)
-                and resolver_fn.func == default_resolver
-            ):
+            if isinstance(resolver_fn, functools.partial) and resolver_fn.func == default_resolver:
                 return resolver_fn.args[0]
             return resolver_fn
 
     def _is_resolver_for_id_field(self, resolver):
         resolve_id = DjangoObjectType.resolve_id
         # For python 2 unbound method:
-        if hasattr(resolve_id, "im_func"):
+        if hasattr(resolve_id, 'im_func'):
             resolve_id = resolve_id.im_func
         return resolver == resolve_id
 
@@ -307,9 +298,8 @@ class QueryOptimizer(object):
             descriptor = model.__dict__.get(name)
             if not descriptor:
                 return None
-            return getattr(descriptor, "rel", None) or getattr(
-                descriptor, "related", None
-            )  # Django < 1.9
+            return getattr(descriptor, 'rel', None) \
+                or getattr(descriptor, 'related', None)  # Django < 1.9
 
     def _is_foreign_key_id(self, model_field, name):
         return (
@@ -333,7 +323,7 @@ class QueryOptimizer(object):
         )
 
 
-class QueryOptimizerStore:
+class QueryOptimizerStore():
     def __init__(self, disable_abort_only=False):
         self.select_set = set()
         self.prefetch_set = set()
@@ -404,7 +394,7 @@ def _get_path_from_parent(self, parent):
     model to the current model, or an empty list if parent is not a
     parent of the current model.
     """
-    if hasattr(self, "get_path_from_parent"):
+    if hasattr(self, 'get_path_from_parent'):
         return self.get_path_from_parent(parent)
     if self.model is parent:
         return []
