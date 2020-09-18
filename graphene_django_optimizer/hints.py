@@ -10,8 +10,10 @@ def _normalize_model_field(value):
 
 def _normalize_hint_value(value):
     if not callable(value):
-        if not is_iterable(value):
-            value = (value,)
+        if not isinstance(value, set):
+            if not is_iterable(value):
+                value = (value,)
+            value = set(value)
         return_value = value
         value = lambda *args, **kwargs: return_value
     return value
