@@ -241,24 +241,24 @@ class QueryOptimizer(object):
 
         self._add_optimization_hints(
             optimization_hints.select_related(info, *args),
-            store.select_list,
+            store.select_set,
         )
         self._add_optimization_hints(
             optimization_hints.prefetch_related(info, *args),
-            store.prefetch_list,
+            store.prefetch_set,
         )
-        if store.only_list is not None:
+        if store.only_set is not None:
             self._add_optimization_hints(
                 optimization_hints.only(info, *args),
-                store.only_list,
+                store.only_set,
             )
         return True
 
     def _add_optimization_hints(self, source, target):
         if source:
             if not is_iterable(source):
-                source = (source,)
-            target += source
+                source = {source,}
+            target.update(source)
 
     def _get_name_from_resolver(self, resolver):
         optimization_hints = self._get_optimization_hints(resolver)
@@ -325,72 +325,72 @@ class QueryOptimizer(object):
 
 class QueryOptimizerStore():
     def __init__(self, disable_abort_only=False):
-        self.select_list = []
-        self.prefetch_list = []
-        self.only_list = []
+        self.select_set = set()
+        self.prefetch_set = set()
+        self.only_set = set()
         self.disable_abort_only = disable_abort_only
 
     def select_related(self, name, store):
-        if store.select_list:
-            for select in store.select_list:
-                self.select_list.append(name + LOOKUP_SEP + select)
+        if store.select_set:
+            for select in store.select_set:
+                self.select_set.add(name + LOOKUP_SEP + select)
         else:
-            self.select_list.append(name)
-        for prefetch in store.prefetch_list:
+            self.select_set.add(name)
+        for prefetch in store.prefetch_set:
             if isinstance(prefetch, Prefetch):
                 prefetch.add_prefix(name)
             else:
                 prefetch = name + LOOKUP_SEP + prefetch
-            self.prefetch_list.append(prefetch)
-        if self.only_list is not None:
-            if store.only_list is None:
+            self.prefetch_set.add(prefetch)
+        if self.only_set is not None:
+            if store.only_set is None:
                 self.abort_only_optimization()
             else:
-                for only in store.only_list:
-                    self.only_list.append(name + LOOKUP_SEP + only)
+                for only in store.only_set:
+                    self.only_set.add(name + LOOKUP_SEP + only)
 
     def prefetch_related(self, name, store, queryset):
-        if store.select_list or store.only_list:
+        if store.select_set or store.only_set:
             queryset = store.optimize_queryset(queryset)
-            self.prefetch_list.append(Prefetch(name, queryset=queryset))
-        elif store.prefetch_list:
-            for prefetch in store.prefetch_list:
+            self.prefetch_set.add(Prefetch(name, queryset=queryset))
+        elif store.prefetch_set:
+            for prefetch in store.prefetch_set:
                 if isinstance(prefetch, Prefetch):
                     prefetch.add_prefix(name)
                 else:
                     prefetch = name + LOOKUP_SEP + prefetch
-                self.prefetch_list.append(prefetch)
+                self.prefetch_set.add(prefetch)
         else:
-            self.prefetch_list.append(name)
+            self.prefetch_set.add(name)
 
     def only(self, field):
-        if self.only_list is not None:
-            self.only_list.append(field)
+        if self.only_set is not None:
+            self.only_set.add(field)
 
     def abort_only_optimization(self):
         if not self.disable_abort_only:
-            self.only_list = None
+            self.only_set = None
 
     def optimize_queryset(self, queryset):
-        if self.select_list:
-            queryset = queryset.select_related(*self.select_list)
+        if self.select_set:
+            queryset = queryset.select_related(*self.select_set)
 
-        if self.prefetch_list:
-            queryset = queryset.prefetch_related(*self.prefetch_list)
+        if self.prefetch_set:
+            queryset = queryset.prefetch_related(*self.prefetch_set)
 
-        if self.only_list:
-            queryset = queryset.only(*self.only_list)
+        if self.only_set:
+            queryset = queryset.only(*self.only_set)
 
         return queryset
 
     def append(self, store):
-        self.select_list += store.select_list
-        self.prefetch_list += store.prefetch_list
-        if self.only_list is not None:
-            if store.only_list is None:
-                self.only_list = None
+        self.select_set.update(store.select_set)
+        self.prefetch_set.update(store.prefetch_set)
+        if self.only_set is not None:
+            if store.only_set is None:
+                self.only_set = None
             else:
-                self.only_list += store.only_list
+                self.only_set.update(store.only_set)
 
 
 # For legacy Django versions:
