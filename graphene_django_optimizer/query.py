@@ -202,8 +202,7 @@ class QueryOptimizer(object):
             if isinstance(model_field, ManyToOneRel):
                 field_store.only(model_field.field.name)
 
-            related_queryset = model_field.related_model.objects.all()
-            store.prefetch_related(name, field_store, related_queryset)
+            store.prefetch_related(name, field_store)
             return True
         if not model_field.is_relation:
             store.only(name)
@@ -349,11 +348,8 @@ class QueryOptimizerStore():
                 for only in store.only_list:
                     self.only_list.append(name + LOOKUP_SEP + only)
 
-    def prefetch_related(self, name, store, queryset):
-        if store.select_list or store.only_list:
-            queryset = store.optimize_queryset(queryset)
-            self.prefetch_list.append(Prefetch(name, queryset=queryset))
-        elif store.prefetch_list:
+    def prefetch_related(self, name, store):
+        if store.prefetch_list:
             for prefetch in store.prefetch_list:
                 if isinstance(prefetch, Prefetch):
                     prefetch.add_prefix(name)
