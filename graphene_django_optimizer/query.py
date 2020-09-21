@@ -59,7 +59,7 @@ class QueryOptimizer(object):
         )
         optimized_queryset = store.optimize_queryset(queryset)
 
-        prefetches = optimized_queryset._prefetch_related_lookups.copy()
+        prefetches = optimized_queryset._prefetch_related_lookups
         
         # Get a unique set of the prefetches (Prefetch objects are hashable)
         # Then sort them so Prefetch objects go first.
