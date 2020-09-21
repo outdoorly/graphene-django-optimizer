@@ -60,15 +60,18 @@ class QueryOptimizer(object):
         optimized_queryset = store.optimize_queryset(queryset)
 
         prefetches = optimized_queryset._prefetch_related_lookups
-        
+
         # Get a unique set of the prefetches (Prefetch objects are hashable)
         # Then sort them so Prefetch objects go first.
         unique = sorted(
             list(set(prefetches)), key=lambda lookup: not isinstance(lookup, Prefetch)
         )
 
-        optimized_queryset.prefetch_related(None) # Clear the prefetches
-        optimized_queryset.prefetch_related(*unique) # Reinstate the prefetches
+        optimized_queryset = optimized_queryset.prefetch_related(
+            None
+        ).prefetch_related(  # Clear the prefetches
+            *unique
+        )  # Reinstate the prefetches
 
         return optimized_queryset
 
