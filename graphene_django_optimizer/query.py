@@ -59,6 +59,12 @@ class QueryOptimizer(object):
         )
         optimized_queryset = store.optimize_queryset(queryset)
 
+        # There's a chance that nothing got optimized and we're left with
+        # a Django Manager object -- which is most definitely not a queryset.
+        # In that case, we just return it.
+        if not hasattr(optimized_queryset, "_prefetch_related_lookups"):
+            return optimized_queryset
+
         prefetches = optimized_queryset._prefetch_related_lookups
 
         # Get a unique set of the prefetches (Prefetch objects are hashable)
